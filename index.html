@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style"
+    content="black-translucent" />
+  <link rel="apple-touch-icon-precomposed" href="touch-icon.png" />
+  <link rel="shortcut icon" href="touch-icon.png" />
+  <style type="text/css">
+body {
+    font-size: 300%;
+    font-family: sans-serif;
+}
+#ui {
+    margin-top: 40px;
+}
+#kilos, #grams {
+    -webkit-appearance: none;
+    font-size: inherit;
+    font-family: monospace;
+    text-align: right;
+}
+#record {
+    -webkit-appearance: none;
+    font-size: inherit;
+}
+#average {
+    font-size: 150%;
+    font-family: monospace;
+}
+#log {
+    font-family: monospace;
+    font-size: .5em;
+}
+  </style>
+  <title>Weight</title>
+ </head>
+ <body>
+  <div id="ui">
+   <select id="kilos"></select>.<select id="grams"></select>
+   <div>
+    <button id="record">Record</button>
+   </div>
+   <div id="average"></div>
+   <div id="log">
+   </div>
+  </div>
+  <script type="text/javascript">
+(function () {
+'use strict';
+var qs = function (q) {return document.querySelector(q);},
+    qsa = function (q) {
+        return Array.prototype.slice.call(document.querySelectorAll(q));
+    },
+    log,
+    day,
+    update,
+    state,
+    dummy;
+
+log = function (m) {
+    qs('#log').innerHTML = '<hr>' + m + qs('#log').innerHTML;
+    document.body.scrollTop = document.documentElement.scrollTop = 0;
+};
+
+day = function () {
+    return Math.floor(new Date().getTime() / 1000 / 60 / 60 / 24);
+}
+
+update = function () {
+    var today = day(),
+        weight,
+        w,
+        av,
+        i;
+
+    weight = parseFloat(qs('#kilos').value + '.' + qs('#grams').value);
+    console.log(weight);
+    state = localStorage.state;
+    if (!state) {
+        state = {day: today, weights: [weight, weight, weight, weight]};
+    }
+    else {
+        state = JSON.parse(state);
+    }
+    if (state.day == today) {
+        w = state.weights.pop();
+        if (w > weight) {
+            w = weight;
+        }
+        state.weights.push(w);
+    }
+    else {
+        for (i = state.day; i < today; i++) {
+            state.weights.shift();
+            if (i < today - 1) {
+                state.weights.push(state.weights[state.weights.length - 1]);
+            }
+            else {
+                state.weights.push(weight);
+            }
+        }
+    }
+    localStorage.state = JSON.stringify(state);
+    av = 0;
+    for (i = 0; i < state.weights.length; i++) {
+        av += state.weights[i];
+    }
+    av /= state.weights.length;
+    av = Math.floor(av * 10 + 0.5) / 10;
+    qs('#average').innerHTML = av;
+    log(today + ' ' + weight + ' ' + av + ' ' + localStorage.state);
+}
+
+qs('#record').addEventListener('click', function (e) {
+    var today = day(),
+        dummy;
+
+    update();
+});
+
+(function () {
+    var list = [],
+        i,
+        w;
+    for (i = 50; i < 75; i++) {
+        list.push(String(i));
+    }
+    qs('#kilos').innerHTML =
+        '<option>' + list.join('</option><option>') + '</option>';
+    qs('#kilos').value = list[list.length - 1];
+
+    list = [];
+    for (i = 0; i < 10; i++) {
+        list.push(String(i));
+    }
+    qs('#grams').innerHTML =
+        '<option>' + list.join('</option><option>') + '</option>';
+    qs('#grams').value = list[list.length - 1];
+
+    update();
+    w = state.weights[state.weights.length - 1];
+    qs('#kilos').value = Math.floor(w);
+    qs('#grams').value = Math.floor(w * 10 % 10);
+}());
+
+}());
+  </script>
+ </body>
+</html>
