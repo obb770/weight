@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html>
+<!-- This HTML source code is placed in the public domain -->
+<html manifest="manifest">
  <head>
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, user-scalable=no" />
@@ -12,23 +13,23 @@
 body {
     font-size: 300%;
     font-family: sans-serif;
+    text-align: center;
 }
 #ui {
     margin-top: 40px;
+}
+#average {
+    font-size: 200%;
+    font-family: monospace;
 }
 #kilos, #grams {
     -webkit-appearance: none;
     font-size: inherit;
     font-family: monospace;
-    text-align: right;
 }
-#record {
+#days {
     -webkit-appearance: none;
     font-size: inherit;
-}
-#average {
-    font-size: 150%;
-    font-family: monospace;
 }
 #log {
     font-family: monospace;
@@ -39,11 +40,13 @@ body {
  </head>
  <body>
   <div id="ui">
-   <select id="kilos"></select>.<select id="grams"></select>
-   <div>
-    <button id="record">Record</button>
-   </div>
    <div id="average"></div>
+   <div>
+    <select id="kilos"></select>.<select id="grams"></select>
+   </div>
+   <div>
+    <select id="days"></select>
+   </div>
    <div id="log">
    </div>
   </div>
@@ -56,8 +59,13 @@ var qs = function (q) {return document.querySelector(q);},
     },
     log,
     day,
-    update,
+    onWeightChange,
+    onDayChange,
+    MAX_WEIGHT = 75,
+    MIN_WEIGHT = 50,
+    DAYS = {"Today": 0, "Yesterday": 1, "Today - 2": 2, "Today - 3": 3},
     state,
+    current = 0,
     dummy;
 
 log = function (m) {
@@ -67,70 +75,63 @@ log = function (m) {
 
 day = function () {
     return Math.floor(new Date().getTime() / 1000 / 60 / 60 / 24);
-}
+};
 
-update = function () {
+onWeightChange = function () {
     var today = day(),
-        weight,
-        w,
         av,
         i;
 
-    weight = parseFloat(qs('#kilos').value + '.' + qs('#grams').value);
-    console.log(weight);
-    state = localStorage.state;
-    if (!state) {
-        state = {day: today, weights: [weight, weight, weight, weight]};
+    while (state.day < today) {
+        state.weights.pop();
+        state.weights.unshift(state.weights[0]);
+        state.day++;
+        current = 0;
     }
-    else {
-        state = JSON.parse(state);
-    }
-    if (state.day == today) {
-        w = state.weights.pop();
-        if (w > weight) {
-            w = weight;
-        }
-        state.weights.push(w);
-    }
-    else {
-        for (i = state.day; i < today; i++) {
-            state.weights.shift();
-            if (i < today - 1) {
-                state.weights.push(state.weights[state.weights.length - 1]);
-            }
-            else {
-                state.weights.push(weight);
-            }
-        }
-    }
+    state.weights[current] =
+        parseFloat(qs('#kilos').value + '.' + qs('#grams').value);
     localStorage.state = JSON.stringify(state);
     av = 0;
     for (i = 0; i < state.weights.length; i++) {
         av += state.weights[i];
     }
     av /= state.weights.length;
-    av = Math.floor(av * 10 + 0.5) / 10;
+    av = String(Math.floor(av * 10 + 0.5));
+    av = av.substr(0, av.length - 1) + '.' + av.substr(av.length - 1, 1);
     qs('#average').innerHTML = av;
-    log(today + ' ' + weight + ' ' + av + ' ' + localStorage.state);
-}
+    log(today + ' ' + current + ' ' + av + ' ' + localStorage.state);
+};
 
-qs('#record').addEventListener('click', function (e) {
-    var today = day(),
-        dummy;
+onDayChange = function () {
+    var w;
+    current = DAYS[qs('#days').value];
+    w = state.weights[current];
+    qs('#kilos').value = Math.floor(w);
+    qs('#grams').value = Math.floor(w * 10 % 10);
 
-    update();
-});
+    log(current);
+};
 
 (function () {
-    var list = [],
+    var max = MAX_WEIGHT - 0.1,
+        list,
         i,
-        w;
-    for (i = 50; i < 75; i++) {
+        d;
+    state = localStorage.state;
+    if (state) {
+        state = JSON.parse(state);
+    }
+    else {
+        state = {day: day(), weights: [max, max, max, max]};
+    }
+
+    list = [];
+    for (i = MIN_WEIGHT; i < MAX_WEIGHT; i++) {
         list.push(String(i));
     }
     qs('#kilos').innerHTML =
         '<option>' + list.join('</option><option>') + '</option>';
-    qs('#kilos').value = list[list.length - 1];
+    qs('#kilos').addEventListener('change', onWeightChange, false);
 
     list = [];
     for (i = 0; i < 10; i++) {
@@ -138,12 +139,20 @@ qs('#record').addEventListener('click', function (e) {
     }
     qs('#grams').innerHTML =
         '<option>' + list.join('</option><option>') + '</option>';
-    qs('#grams').value = list[list.length - 1];
+    qs('#grams').addEventListener('change', onWeightChange, false);
 
-    update();
-    w = state.weights[state.weights.length - 1];
-    qs('#kilos').value = Math.floor(w);
-    qs('#grams').value = Math.floor(w * 10 % 10);
+    list = [];
+    for (d in DAYS) {
+        if (DAYS.hasOwnProperty(d)) {
+            list[DAYS[d]] = d;
+        }
+    }
+    qs('#days').innerHTML =
+        '<option>' + list.join('</option><option>') + '</option>';
+    qs('#days').addEventListener('change', onDayChange, false);
+
+    onDayChange();
+    onWeightChange();
 }());
 
 }());
