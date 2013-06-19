@@ -123,10 +123,7 @@ var qs = function (q) {return document.querySelector(q);},
     scrollUp = function () {
         document.body.scrollTop = document.documentElement.scrollTop = 0;
     },
-    logContents = qs('#log').innerHTML,
-    isLogVisible,
     log,
-    toggleVisibility,
     day,
     DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
             'Saturday'],
@@ -138,23 +135,32 @@ var qs = function (q) {return document.querySelector(q);},
     current = 0,
     dummy;
 
-isLogVisible = function () {
-    return qs('#log').style.opacity === '1';
-};
+log = (function () {
+    var logContents = qs('#log').innerHTML,
+        isLogVisible = function () {
+            return qs('#log').style.opacity === '1';
+        },
+        toggleVisibility = function (e) {
+            e.style.opacity  = isLogVisible() ? '' : '1';
+            if (isLogVisible) {
+                qs('#log').innerHTML = logContents;
+            }
+        };
 
-toggleVisibility = function (e) {
-    e.style.opacity  = isLogVisible() ? '' : '1';
-    if (isLogVisible) {
-        qs('#log').innerHTML = logContents;
-    }
-};
+    qs('#log').addEventListener('dblclick', function () {
+        toggleVisibility(this);
+    }, false);
+    qs('#log').addEventListener('gesturestart', function () {
+        toggleVisibility(this);
+    }, false);
 
-log = function (m) {
-    logContents = '<hr>' + m + logContents;
-    if (isLogVisible()) {
-        qs('#log').innerHTML = logContents;
-    }
-};
+    return function (m) {
+        logContents = '<hr>' + m + logContents;
+        if (isLogVisible()) {
+            qs('#log').innerHTML = logContents;
+        };
+    };
+}());
 
 day = function () {
     var date = new Date();
@@ -251,13 +257,6 @@ onDayChange = function () {
     for (i = 0; i < selectors.length; i++) {
         selectors[i].addEventListener('focusout', scrollUp, false);
     }
-
-    qs('#log').addEventListener('dblclick', function () {
-        toggleVisibility(this);
-    }, false);
-    qs('#log').addEventListener('gesturestart', function () {
-        toggleVisibility(this);},
-    false);
 
     onDayChange();
     onWeightChange();
