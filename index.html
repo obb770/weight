@@ -20,34 +20,46 @@ body {
 }
 #average {
     font-size: 200%;
-    font-family: monospace;
-}
-#kilos, #grams {
-    -webkit-appearance: none;
-    font-size: inherit;
-    font-family: monospace;
 }
 #days {
     -webkit-appearance: none;
     font-size: inherit;
 }
+#kilos, #grams {
+    -webkit-appearance: none;
+    font-size: inherit;
+    margin-top: .5em;
+}
+#history {
+    font-size: 50%;
+    margin-top: .5em;
+}
 #log {
     font-family: monospace;
-    font-size: .5em;
+    font-size: 30%;
+    opacity: 0;
+    text-align: left;
 }
   </style>
   <title>Weight</title>
  </head>
  <body>
   <div id="ui">
-   <div id="average"></div>
-   <div>
-    <select id="kilos"></select>.<select id="grams"></select>
+   <div id="average">
    </div>
    <div>
     <select id="days"></select>
    </div>
+   <div>
+    <select id="kilos"></select>.<select id="grams"></select>
+   </div>
+   <div id="history">
+   </div>
    <div id="log">
+<hr>
+Log start...
+<br>
+<br>
    </div>
   </div>
   <script type="text/javascript">
@@ -57,18 +69,33 @@ var qs = function (q) {return document.querySelector(q);},
     qsa = function (q) {
         return Array.prototype.slice.call(document.querySelectorAll(q));
     },
+    logContents = qs('#log').innerHTML,
+    isLogVisible,
     log,
+    toggleVisibility,
     day,
     onWeightChange,
     onDayChange,
     MAX_WEIGHT = 75,
     MIN_WEIGHT = 50,
-    DAYS = {"Today": 0, "Yesterday": 1, "Today - 2": 2, "Today - 3": 3},
+    theDays = ["Today", "Yesterday", "Today - 2", "Today - 3"],
     state,
     current = 0,
     dummy;
 
+isLogVisible = function () {
+    return qs('#log').style.opacity === '1';
+};
+
+toggleVisibility = function (e) {
+    e.style.opacity  = isLogVisible() ? '' : '1';
+};
+
 log = function (m) {
+    logContents = '<hr>' + m + logContents;
+    if (!isLogVisible()) {
+        return;
+    }
     qs('#log').innerHTML = '<hr>' + m + qs('#log').innerHTML;
     document.body.scrollTop = document.documentElement.scrollTop = 0;
 };
@@ -99,24 +126,24 @@ onWeightChange = function () {
     av = String(Math.floor(av * 10 + 0.5));
     av = av.substr(0, av.length - 1) + '.' + av.substr(av.length - 1, 1);
     qs('#average').innerHTML = av;
+    qs('#history').innerHTML = state.weights.join(' ');
     log(today + ' ' + current + ' ' + av + ' ' + localStorage.state);
 };
 
 onDayChange = function () {
     var w;
-    current = DAYS[qs('#days').value];
+    current = qs('#days').selectedIndex;
     w = state.weights[current];
     qs('#kilos').value = Math.floor(w);
     qs('#grams').value = Math.floor(w * 10 % 10);
 
-    log(current);
+    log(current + ' ' + theDays[current]);
 };
 
 (function () {
     var max = MAX_WEIGHT - 0.1,
         list,
-        i,
-        d;
+        i;
     state = localStorage.state;
     if (state) {
         state = JSON.parse(state);
@@ -141,15 +168,17 @@ onDayChange = function () {
         '<option>' + list.join('</option><option>') + '</option>';
     qs('#grams').addEventListener('change', onWeightChange, false);
 
-    list = [];
-    for (d in DAYS) {
-        if (DAYS.hasOwnProperty(d)) {
-            list[DAYS[d]] = d;
-        }
-    }
     qs('#days').innerHTML =
-        '<option>' + list.join('</option><option>') + '</option>';
+        '<option>' + theDays.join('</option><option>') + '</option>';
     qs('#days').addEventListener('change', onDayChange, false);
+    qs('#days').addEventListener('blur', function () {console.log('blur');}, false);
+
+    qs('#log').addEventListener('dblclick', function () {
+        toggleVisibility(this);
+    }, false);
+    qs('#log').addEventListener('gesturestart', function () {
+        toggleVisibility(this);},
+    false);
 
     onDayChange();
     onWeightChange();
