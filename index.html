@@ -156,7 +156,9 @@ log = function (m) {
 };
 
 day = function () {
-    return Math.floor(new Date().getTime() / 1000 / 60 / 60 / 24);
+    var date = new Date();
+    return Math.floor(
+            (date.getTime() / 1000 / 60 - date.getTimezoneOffset()) / 60 / 24);
 };
 
 theDays = function () {
