@@ -89,6 +89,7 @@ select {
     font-size: 30%;
     opacity: 0;
     text-align: left;
+    min-height: 80px;
 }
   </style>
   <title>Weight</title>
@@ -106,10 +107,6 @@ select {
    <div id="history">
    </div>
    <div id="log">
-<hr>
-Log start...
-<br>
-<br>
    </div>
   </div>
   <script type="text/javascript">
@@ -140,15 +137,14 @@ var qs = function (q) {return document.querySelector(q);},
     dummy;
 
 log = (function () {
-    var logContents = qs('#log').innerHTML,
+    var logContents = "",
         isLogVisible = function () {
             return qs('#log').style.opacity === '1';
         },
         toggleVisibility = function (e) {
-            e.style.opacity  = isLogVisible() ? '' : '1';
-            if (isLogVisible) {
-                qs('#log').innerHTML = logContents;
-            }
+            var wasVisible = isLogVisible();
+            e.style.opacity  = wasVisible ? '' : '1';
+            qs('#log').innerHTML = wasVisible ? '' : logContents;
         };
 
     qs('#log').addEventListener('dblclick', function () {
