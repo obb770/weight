@@ -123,13 +123,18 @@ var qs = function (q) {return document.querySelector(q);},
         document.body.scrollTop = document.documentElement.scrollTop = 0;
     },
     log,
-    day,
+    MAX_WEIGHT = 100,
+    MIN_WEIGHT = 50,
+    NDAYS = 4,
+    minPerDay = 24 * 60,
     DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
             'Saturday'],
+    day,
     theDays,
     weightToString,
     onWeightChange,
     onDayChange,
+    onNewDay,
     state,
     current = 0,
     dummy;
@@ -164,7 +169,8 @@ log = (function () {
 day = function () {
     var date = new Date();
     return Math.floor(
-            (date.getTime() / 1000 / 60 - date.getTimezoneOffset()) / 60 / 24);
+            (date.getTime() / 1000 / 60 - date.getTimezoneOffset()) /
+                    minPerDay);
 };
 
 theDays = function () {
@@ -182,7 +188,7 @@ theDays = function () {
         }
         result.push(DAYS[d]);
     }
-    return result;
+    return result.slice(0, state.weights.length);
 }
 
 weightToString = function (w) {
@@ -191,19 +197,12 @@ weightToString = function (w) {
         w = ' ' + w;
     }
     return w.substr(0, w.length - 1) + '.' + w.substr(w.length - 1, 1);
-}
+};
 
 onWeightChange = function () {
-    var today = day(),
-        av,
+    var av,
         i;
 
-    while (state.day < today) {
-        state.weights.unshift(state.weights[0]);
-        state.weights.pop();
-        state.day++;
-        current = 0;
-    }
     state.weights[current] = parseFloat(qs('#weight').value);
     localStorage.state = JSON.stringify(state);
     av = 0;
@@ -213,7 +212,7 @@ onWeightChange = function () {
     av /= state.weights.length;
     qs('#average').innerHTML = weightToString(av);
     qs('#history').innerHTML = state.weights.join(' ');
-    log(today + ' ' + current + ' ' + av + ' ' + localStorage.state);
+    log(current + ' ' + av + ' ' + localStorage.state);
 };
 
 onDayChange = function () {
@@ -223,24 +222,53 @@ onDayChange = function () {
     log(current + ' ' + theDays()[current] + ' ' + qs('#weight').value);
 };
 
-(function () {
-    var MAX_WEIGHT = 100,
-        MIN_WEIGHT = 50,
-        NDAYS = 4,
-        list,
-        i,
-        selectors = qsa('select');
-    state = localStorage.state;
-    if (state) {
-        state = JSON.parse(state);
+onNewDay = function () {
+    var today = day(),
+        weight;
+    log(current + ' ' + today);
+
+    if (!state) {
+        state = localStorage.state;
+        if (state) {
+            state = JSON.parse(state);
+        }
     }
-    else {
-        state = {day: day(), weights: [(MAX_WEIGHT + MIN_WEIGHT) / 2]};
-    }
-    for (i = state.weights.length; i < NDAYS; i++) {
-        state.weights.push(state.weights[i - 1]);
+    if (!state || !state.day || state.day > today ||
+            state.day + NDAYS < today) {
+        if (state && state.weights && state.weights.length > 0) {
+            weight = state.weights[0];
+        }
+        else {
+            weight = (MAX_WEIGHT + MIN_WEIGHT) / 2;
+        }
+        state = {day: today, weights: [weight]};
+        current = 0;
     }
 
+    while (state.day < today) {
+        state.weights.unshift(state.weights[0]);
+        if (state.weights.length > NDAYS) {
+            state.weights.pop();
+        }
+        state.day++;
+        current++;
+    }
+
+    qs('#day').innerHTML =
+        '<option>' + theDays().join('</option><option>') + '</option>';
+    if (current >= NDAYS) {
+        current = 0;
+    }
+    qs('#day').selectedIndex = current;
+    onDayChange();
+    onWeightChange();
+    setTimeout(onNewDay, minPerDay * 60 * 1000);
+};
+
+(function () {
+    var list,
+        i,
+        selectors = qsa('select');
     list = [];
     for (i = MIN_WEIGHT * 10; i < MAX_WEIGHT * 10; i++) {
         list.push(weightToString(i / 10));
@@ -249,16 +277,13 @@ onDayChange = function () {
         '<option>' + list.join('</option><option>') + '</option>';
     qs('#weight').addEventListener('change', onWeightChange, false);
 
-    qs('#day').innerHTML =
-        '<option>' + theDays().join('</option><option>') + '</option>';
     qs('#day').addEventListener('change', onDayChange, false);
 
     for (i = 0; i < selectors.length; i++) {
         selectors[i].addEventListener('focusout', scrollUp, false);
     }
 
-    onDayChange();
-    onWeightChange();
+    onNewDay();
 }());
 
 }());
