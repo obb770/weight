@@ -234,7 +234,6 @@ onNewDay = function () {
             weight = (MAX_WEIGHT + MIN_WEIGHT) / 2;
         }
         state = {day: today, weights: [weight]};
-        current = 0;
     }
 
     while (state.day < today) {
@@ -243,14 +242,11 @@ onNewDay = function () {
             state.weights.pop();
         }
         state.day++;
-        current++;
     }
 
     qs('#day').innerHTML =
         '<option>' + theDays().join('</option><option>') + '</option>';
-    if (current >= NDAYS) {
-        current = 0;
-    }
+    current = 0;
     qs('#day').selectedIndex = current;
     onDayChange();
     onWeightChange();
