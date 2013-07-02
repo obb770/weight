@@ -73,16 +73,14 @@ body {
     font-size: 200%;
 }
 select {
+    margin-top: .5em;
     -webkit-appearance: none;
     font-size: inherit;
     color: #08c;
 }
-#weight {
-    margin-top: .5em;
-}
 #history {
-    font-size: 50%;
     margin-top: .5em;
+    font-size: 50%;
 }
 #log {
     font-family: monospace;
@@ -98,13 +96,13 @@ select {
   <div id="ui">
    <div id="average">
    </div>
+   <div id="history">
+   </div>
    <div>
     <select id="day"></select>
    </div>
    <div>
     <select id="weight"></select>
-   </div>
-   <div id="history">
    </div>
    <div id="log">
    </div>
@@ -188,20 +186,24 @@ weightToString = function (w) {
 };
 
 onWeightChange = function () {
-    var av = 0,
-        history = [],
-        i;
+    var avs = [],
+        i,
+        av,
+        j;
 
     state.weights[current] = parseFloat(qs('#weight').value);
     localStorage.state = JSON.stringify(state);
     for (i = 0; i < state.weights.length; i++) {
-        av += state.weights[i];
-        history.push(weightToString(state.weights[i]));
+        av = 0;
+        for (j = 0; j < NDAYS && i + j < state.weights.length; j++) {
+            av += state.weights[i + j];
+        }
+        av /= j;
+        avs.push(weightToString(av))
     }
-    av /= state.weights.length;
-    qs('#average').innerHTML = weightToString(av);
-    qs('#history').innerHTML = history.join(' ');
-    log(current + ' ' + av + ' ' + localStorage.state);
+    qs('#average').innerHTML = avs[current];
+    qs('#history').innerHTML = avs.slice(1, NDAYS).join(' ');
+    log(current + ' ' + avs.join(' ') + ' ' + localStorage.state);
 };
 
 onDayChange = function () {
@@ -217,6 +219,7 @@ onNewDay = function () {
                 (date.getTime() / 1000 / 60 - date.getTimezoneOffset()) /
                         minPerDay),
         untilTomorrow,
+        maxWeights = NDAYS * 2 - 1,
         weight;
     log(current + ' ' + today);
 
@@ -227,7 +230,7 @@ onNewDay = function () {
         }
     }
     if (!state || !state.day || state.day > today ||
-            state.day + NDAYS < today) {
+            state.day + maxWeights < today) {
         if (state && state.weights && state.weights.length > 0) {
             weight = state.weights[0];
         }
@@ -239,7 +242,7 @@ onNewDay = function () {
 
     while (state.day < today) {
         state.weights.unshift(state.weights[0]);
-        if (state.weights.length > NDAYS) {
+        while (state.weights.length > maxWeights) {
             state.weights.pop();
         }
         state.day++;
