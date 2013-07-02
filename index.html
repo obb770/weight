@@ -188,18 +188,19 @@ weightToString = function (w) {
 };
 
 onWeightChange = function () {
-    var av,
+    var av = 0,
+        history = [],
         i;
 
     state.weights[current] = parseFloat(qs('#weight').value);
     localStorage.state = JSON.stringify(state);
-    av = 0;
     for (i = 0; i < state.weights.length; i++) {
         av += state.weights[i];
+        history.push(weightToString(state.weights[i]));
     }
     av /= state.weights.length;
     qs('#average').innerHTML = weightToString(av);
-    qs('#history').innerHTML = state.weights.join(' ');
+    qs('#history').innerHTML = history.join(' ');
     log(current + ' ' + av + ' ' + localStorage.state);
 };
 
